@@ -28,29 +28,18 @@ final class CounterPillView: NSView {
     }
 }
 
-/// Full-window overlay listing every keyboard shortcut. Any click dismisses it.
+/// Full-window overlay listing every keyboard shortcut, as currently
+/// customized in Settings. Any click dismisses it.
 final class ShortcutsOverlayView: NSView {
     var onDismiss: (() -> Void)?
 
     private let card = NSVisualEffectView()
 
-    private static let shortcuts: [(String, String)] = [
-        ("← → ↑ ↓", "Previous / next file"),
-        ("Space", "Next file  ·  video: play/pause"),
-        ("F", "Full screen"),
-        ("0  /  ⌘0", "Zoom to fit"),
-        ("1  /  ⌘1", "Actual size (pixel-perfect)"),
-        ("⌘+  /  ⌘−", "Zoom in / out"),
+    /// Mouse gestures and fixed shortcuts that aren't customizable.
+    private static let fixedShortcuts: [(String, String)] = [
         ("⌘ Scroll · Pinch", "Continuous zoom"),
         ("Double click", "Toggle fit ↔ actual size"),
-        ("⌘C", "Copy image"),
-        ("⌘I", "Info sidebar"),
-        ("⌘O", "Open…"),
-        ("⌘⌫", "Move to Trash"),
-        ("3", "Toggle 360° video view (drag to look, scroll to zoom)"),
-        ("H  /  ?", "This help"),
-        ("A", "About / version"),
-        ("Esc", "Dismiss / exit full screen / close"),
+        ("⌘,", "Settings (customize shortcuts)"),
     ]
 
     init() {
@@ -64,6 +53,15 @@ final class ShortcutsOverlayView: NSView {
         card.wantsLayer = true
         card.layer?.cornerRadius = 14
         card.layer?.masksToBounds = true
+        // The list is built by reload() each time the overlay is shown.
+        addSubview(card)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    /// Rebuilds the list from the current shortcut bindings.
+    func reload() {
+        card.subviews.forEach { $0.removeFromSuperview() }
 
         let title = NSTextField(labelWithString: "Keyboard Shortcuts")
         title.font = .systemFont(ofSize: 15, weight: .bold)
@@ -80,10 +78,8 @@ final class ShortcutsOverlayView: NSView {
         text.setFrameOrigin(NSPoint(x: padding, y: padding))
         card.addSubview(title)
         card.addSubview(text)
-        addSubview(card)
+        needsLayout = true
     }
-
-    required init?(coder: NSCoder) { fatalError() }
 
     override func layout() {
         super.layout()
@@ -95,21 +91,34 @@ final class ShortcutsOverlayView: NSView {
         onDismiss?()
     }
 
+    private static func entries() -> [(String, String)] {
+        let store = ShortcutStore.shared
+        let customizable: [(String, String)] = ShortcutAction.allCases.compactMap { action in
+            let shortcuts = store.shortcuts(for: action)
+            guard !shortcuts.isEmpty else { return nil }
+            return (shortcuts.map(\.displayString).joined(separator: "  /  "), action.title)
+        }
+        return customizable + fixedShortcuts
+    }
+
     private static func buildList() -> NSAttributedString {
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.tabStops = [NSTextTab(textAlignment: .left, location: 150)]
-        paragraph.lineSpacing = 5
+        let shortcuts = entries()
 
         let keyAttrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 13, weight: .semibold),
             .foregroundColor: NSColor.labelColor,
-            .paragraphStyle: paragraph,
         ]
         let descAttrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 13),
             .foregroundColor: NSColor.secondaryLabelColor,
-            .paragraphStyle: paragraph,
         ]
+
+        let keyWidth = shortcuts
+            .map { NSAttributedString(string: $0.0, attributes: keyAttrs).size().width }
+            .max() ?? 0
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.tabStops = [NSTextTab(textAlignment: .left, location: max(150, ceil(keyWidth) + 24))]
+        paragraph.lineSpacing = 5
 
         let out = NSMutableAttributedString()
         for (index, (key, description)) in shortcuts.enumerated() {
@@ -117,6 +126,8 @@ final class ShortcutsOverlayView: NSView {
             let suffix = index == shortcuts.count - 1 ? "" : "\n"
             out.append(NSAttributedString(string: description + suffix, attributes: descAttrs))
         }
+        out.addAttribute(.paragraphStyle, value: paragraph,
+                         range: NSRange(location: 0, length: out.length))
         return out
     }
 }

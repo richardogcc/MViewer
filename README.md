@@ -41,12 +41,13 @@ To make it the default viewer for a format: select a file in Finder →
 |---|---|
 | `←` `→` (or `↑` `↓`) | Previous / next file in folder |
 | `Space` | Next file (video: play/pause) |
-| `F` | Full screen |
+| `F` / `⌃⌘F` | Full screen |
 | `0` / `⌘0` | Zoom to fit |
 | `1` / `⌘1` | Actual size (pixel-perfect) |
-| `⌘+` / `⌘−` | Zoom in / out |
+| `⌘+` (or `⌘=`) / `⌘−` | Zoom in / out |
 | `⌘` + scroll, or pinch | Continuous zoom |
 | Double click | Toggle fit ↔ actual size |
+| `⌘O` | Open… |
 | `⌘C` | Copy image (bitmap + file) |
 | `⌘I` | Info sidebar (metadata, EXIF, GPS) |
 | `⌘⌫` | Move to Trash |
@@ -54,6 +55,23 @@ To make it the default viewer for a format: select a file in Finder →
 | `H` / `?` / `⌘/` | Keyboard shortcuts overlay |
 | `A` | About / version overlay |
 | `Esc` | Exit full screen / close |
+| `⌘,` | Settings |
+
+The keyboard shortcuts above (all but `⌘,`) can be changed in
+**Settings → Shortcuts** (`⌘,`); mouse gestures can't. Click a shortcut to
+record a new one, `+` to add another (up to four per action), `×` to remove
+it, the reset arrow to restore an action's defaults, or **Restore Defaults**
+to reset them all. **Show in Finder** has
+no default shortcut but can be given one. Almost any key can be recorded, Esc
+included; click elsewhere or press `⌘.` to cancel. The pane
+also works from the keyboard: Tab to a shortcut, Space or Return to record,
+Delete to remove it. Assigning a shortcut that another action uses moves it
+over. `⌘Q`, `⌘W`, `⌘H`, `⌥⌘H`, `⌘M` and `⌘,` stay reserved for the system.
+
+The help overlay lists all your current shortcuts. Menu bar items show one
+shortcut each, preferring one with `⌘`, `⌃` or `⌥`; **Open…** only ever shows
+one with `⌘`, `⌃` or `⌥`, since it works in every window. Globe (fn) plus a
+letter, number or symbol key can't be recorded and is left to the system.
 
 Right-click the image for **Show in Finder**, **Copy Image**, **Get Info** and
 **Move to Trash**. Drag & drop files or folders onto the window, or open from

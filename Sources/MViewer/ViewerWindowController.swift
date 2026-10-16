@@ -629,63 +629,71 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSMenu
     private func setShortcutsVisible(_ visible: Bool) {
         shortcutsOverlay.isHidden = !visible
         if visible {
+            shortcutsOverlay.reload()
             shortcutsOverlay.needsLayout = true
         }
     }
 
     private func handleKey(_ event: NSEvent) -> Bool {
+        let action = ShortcutStore.shared.action(matching: event)
+        // A held key repeats only actions meant to repeat (browsing, zooming).
+        // Other repeats are swallowed, not passed on: the menu would run them
+        // again (holding ⌘⌫ trashed one more file per repeat).
+        if event.isARepeat, let action, !isRepeatable(action) { return true }
         if !shortcutsOverlay.isHidden || !aboutOverlay.isHidden {
+            var reopening: [ShortcutAction] = []
+            if !shortcutsOverlay.isHidden { reopening.append(.showShortcuts) }
+            if !aboutOverlay.isHidden { reopening.append(.showAbout) }
             setShortcutsVisible(false)
             aboutOverlay.isHidden = true
-            return true
+            // Plain keys only dismiss. ⌘/⌃/⌥ combos also do their job (⌘, opens
+            // Settings, ⌘Q quits…), except one that would reopen the overlay
+            // being closed.
+            let modified = !event.modifierFlags.isDisjoint(with: [.command, .control, .option])
+            guard modified, !(action.map(reopening.contains) ?? false) else { return true }
         }
-        guard event.modifierFlags.intersection([.command, .option, .control]).isEmpty else {
-            return false
+        guard let action else { return false }
+        perform(action)
+        return true
+    }
+
+    private func isRepeatable(_ action: ShortcutAction) -> Bool {
+        switch action {
+        case .previousFile, .nextFile, .zoomIn, .zoomOut: return true
+        case .playPause: return currentKind == .image // Space browses images
+        default: return false
         }
-        switch event.keyCode {
-        case 123, 126: // left, up
-            previousFile(nil)
-            return true
-        case 124, 125: // right, down
-            nextFile(nil)
-            return true
-        case 49: // space
+    }
+
+    private func perform(_ action: ShortcutAction) {
+        switch action {
+        case .previousFile: previousFile(nil)
+        case .nextFile: nextFile(nil)
+        case .playPause:
             if currentKind == .video, let player {
                 player.rate == 0 ? player.play() : player.pause()
                 showTransientControls()
             } else {
                 nextFile(nil)
             }
-            return true
-        case 53: // esc
+        case .toggleFullScreen: window?.toggleFullScreen(nil)
+        case .zoomToFit: fitToWindow()
+        case .actualSize: actualSize(nil)
+        case .zoomIn: zoomIn(nil)
+        case .zoomOut: zoomOut(nil)
+        case .toggle360: toggle360(nil)
+        case .getInfo: getInfo(nil)
+        case .openFile: NSApp.sendAction(#selector(AppDelegate.openDocument(_:)), to: nil, from: self)
+        case .copyImage: copyImage(nil)
+        case .showInFinder: showInFinder(nil)
+        case .moveToTrash: moveToTrash(nil)
+        case .showShortcuts: setShortcutsVisible(true)
+        case .showAbout: showAbout(nil)
+        case .exitOrClose:
             if window?.styleMask.contains(.fullScreen) == true {
                 window?.toggleFullScreen(nil)
             } else {
                 window?.close()
-            }
-            return true
-        default:
-            switch event.charactersIgnoringModifiers?.lowercased() {
-            case "f":
-                window?.toggleFullScreen(nil)
-                return true
-            case "h", "?":
-                setShortcutsVisible(true)
-                return true
-            case "a":
-                showAbout(nil)
-                return true
-            case "3":
-                toggle360(nil)
-                return true
-            case "0":
-                fitToWindow()
-                return true
-            case "1":
-                actualSize(nil)
-                return true
-            default:
-                return false
             }
         }
     }
